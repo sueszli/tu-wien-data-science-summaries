@@ -1,0 +1,153 @@
+---
+title: "Exercise 10"
+subtitle: "107.330 - Statistical Simulation and Computerintensive Methods, WS24"
+author: "11912007 - Yahya Jabary"
+date: "`r format(Sys.time(), '%d.%m.%Y')`"
+output: pdf_document
+documentclass: article
+papersize: a4
+fontsize: 8pt
+geometry:
+    - top=10mm
+    - bottom=15mm
+    - left=10mm
+    - right=10mm
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+deps <- c("ggplot2", "coda", "gridExtra")
+for (p in deps) {
+  if (!requireNamespace(p, quietly = TRUE)) {
+    install.packages(p, repos = "https://cran.rstudio.com", dependencies = TRUE)
+  }
+  library(p, character.only = TRUE)
+}
+
+if (!requireNamespace("DPpackage", quietly = TRUE)) {
+  install.packages("https://cran.r-project.org/src/contrib/Archive/DPpackage/DPpackage_1.1-7.4.tar.gz", repos = NULL, type = "source")
+}
+library(DPpackage)
+
+options(scipen=999)
+```
+
+```{r, echo=TRUE}
+set.seed(11912007)
+```
+
+<!--
+
+# Installing `DPpackage`
+
+Reproduce the example by Jara et al. `DPpackage`: Bayesian Semi- and Nonparametric Modeling in R. If your R version is too new to obtain the package for it from CRAN, please install from the binaries or github.
+
+- https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3142948/
+- https://cran.r-project.org/src/contrib/Archive/DPpackage/
+- https://github.com/cran/DPpackage
+
+Install the DPpackage with:
+
+```r
+packageurl <- "https://cran.r-project.org/src/contrib/Archive/DPpackage/DPpackage_1.1-7.tar.gz"
+install.packages(packageurl, repos=NULL, type="source")
+```
+
+Tipp: If you are struggling with the older package under Windows, consult the following Link and Instructions for RTools and building DP package with the help of RTools on Windows or alterntive try installing via conda.
+Further Problems can be solved using Fortran 9 instead of 10+. For Linux this is done:
+
+```bash
+sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-9 100
+```
+
+Then the package can be installed in R using:
+
+```r
+packageurl <- "https://cran.r-project.org/src/contrib/Archive/DPpackage/DPpackage_1.1-7.4.tar.gz"
+install.packages(packageurl, repos=NULL, type="source")
+```
+
+If none of this works for you, try using Posit Cloud online. Here you should be able to install the package with the R code above.
+
+-->
+
+# Assignment
+
+Simulate $n=500$ observations from from a mixture of two normal linear regression models, with the mixture weights depending on the predictor, with different error variances and with a non-linear mean function for the second component, $y_{i}|x_{i}\sim^{ind.}e^{-2xi}\cdot N(y_{i}|x_{i},0.01)+(1-e^{-2xi})N(y_{i}|x_{i}^{4},0.04),i=1,\ldots,n,$ where the predictor values $xi$ are simulated from a uniform distribution, $xi\sim^{iid}U(0,1)$.
+
+Apply the DPcdensity function from package DPpackage, was fitted using the following hyper-parameters: $a0=10,b0=1,\nu1=\nu2=4,m2=(\hat{y},\hat{x})^{\prime},\tau1=6.01,\tau2=3.01, S2=\Psi-12$, where S is the sample covariance matrix for the response and predictor. A total number of 25,000 scans of the Markov chain cycle implemented in the `DPcdensity` function were completed. A burn-in period of 5,000 samples was considered and the chain was subsampled every 4 iterates to get a final sample size of 5,000. The following commands were used to fit the model, where the conditional density estimates were evaluated on a grid of 100 points on the range of the response.
+
+Provide the traceplot and density plots for
+
+- the true conditional densities of $y\mid x$ along with
+- the posterior mean estimates and
+- point-wise 95% HPD intervals for several values of x, such as: (a) `x = 0.1`, (b) `x = 0.25`, (c) `x = 0.5`, (d) `x = 0.75`.
+
+```{r, echo=TRUE, fig.width=13, fig.height=6}
+# simulate data
+n <- 500
+x <- runif(n)
+y1 <- x + rnorm(n, 0, sqrt(0.01))
+y2 <- x^4 + rnorm(n, 0, sqrt(0.04))
+u <- runif(n)
+prob <- exp(-2*x)
+y <- ifelse(u < prob, y1, y2)
+
+# set up prior and MCMC parameters / hyperparameters
+w <- cbind(y,x)
+wbar <- apply(w, 2, mean)
+wcov <- var(w)
+
+prior <- list(a0=10, 
+              b0=1,
+              nu1=4,
+              nu2=4,
+              s2=0.5*wcov,
+              m2=wbar,
+              psiinv2=2*solve(wcov),
+              tau1=6.01,
+              tau2=2.01)
+
+mcmc <- list(nburn=5000,
+             nsave=5000,
+             nskip=3,
+             ndisplay=100)
+
+# fit the model
+xpred <- c(0.1, 0.25, 0.5, 0.75)
+fit <- DPcdensity(y=y, x=x, xpred=xpred, ngrid=100,
+                  prior=prior, mcmc=mcmc, 
+                  state=NULL, status=TRUE,
+                  compute.band=TRUE, type.band="HPD")
+
+# 
+# plot
+# 
+
+# true conditional density function
+dtrue <- function(grid, x) {
+  exp(-2*x)*dnorm(grid, mean=x, sd=sqrt(0.01)) + 
+    (1-exp(-2*x))*dnorm(grid, mean=x^4, sd=sqrt(0.04))
+}
+
+plot_conditional_density <- function(fit, x_val, x_index) {
+  par(mfrow=c(1,1))
+  plot(fit$grid, fit$densp.h[x_index,], lwd=1, type="l", lty=2,
+       main=paste("x =", x_val), xlab="y", ylab="Density", ylim=c(0,4))
+  lines(fit$grid, fit$densp.l[x_index,], lwd=1, type="l", lty=2)
+  lines(fit$grid, fit$densp.m[x_index,], lwd=2, type="l", lty=1)
+  lines(fit$grid, dtrue(fit$grid, x_val), lwd=2, type="l", lty=1, col="red")
+  legend("topright", legend=c("True", "Estimated", "95% HPD"),
+         col=c("red", "black", "black"), lty=c(1,1,2), lwd=c(2,2,1))
+}
+
+for (i in 1:length(xpred)) {
+  plot_conditional_density(fit, xpred[i], i)
+}
+
+# plot traceplots and density plots
+mcmc_samples <- as.mcmc(fit$save.state$thetasave)
+# plot(mcmc_samples)
+mcmc_subset <- as.mcmc(fit$save.state$thetasave[, 1:4]) # only plot the first 4 parameters
+par(mfrow=c(2,2), mar=c(4,4,2,1))
+plot(mcmc_subset)
+```

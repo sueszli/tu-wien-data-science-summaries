@@ -1,0 +1,33 @@
+# this container is just to be able to install the `DPpackage` package
+
+services:
+  main:
+    container_name: main
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+    working_dir: /workspace
+    ports:
+      - '8888:8888'
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM --platform=linux/amd64 ubuntu:20.04
+
+        ARG DEBIAN_FRONTEND=noninteractive
+        RUN apt-get update
+
+        # pandoc
+        RUN apt-get install -y pandoc texlive-latex-base texlive-fonts-recommended texlive-fonts-extra texlive-latex-extra texlive-xetex texlive-lang-japanese texlive-lang-cjk texlive-science texlive-pictures texlive-latex-recommended texlive-latex-recommended texlive-latex-extra texlive-fonts-extra texlive-lang-japanese texlive-lang-cjk texlive-science texlive-pictures texlive-xetex texlive-bibtex-extra biber
+
+        # fortran 9
+        RUN apt-get install -y gfortran-9
+        RUN update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-9 100
+        
+        # r
+        RUN apt-get install -y r-base r-base-dev
+        RUN Rscript -e 'for(p in c("rmarkdown", "ISLR")) if(!requireNamespace(p, quietly = TRUE)) install.packages(p, repos = "https://cran.rstudio.com")'
+        RUN Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/DPpackage/DPpackage_1.1-7.4.tar.gz', repos = NULL, type = 'source')"
+
+        CMD ["tail", "-f", "/dev/null"]

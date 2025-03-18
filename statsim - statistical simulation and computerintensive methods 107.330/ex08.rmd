@@ -1,0 +1,331 @@
+---
+title: "Exercise 8"
+subtitle: "107.330 - Statistical Simulation and Computerintensive Methods, WS24"
+author: "11912007 - Yahya Jabary"
+date: "`r format(Sys.time(), '%d.%m.%Y')`"
+output: pdf_document
+documentclass: article
+papersize: a4
+fontsize: 8pt
+geometry:
+    - top=10mm
+    - bottom=15mm
+    - left=10mm
+    - right=10mm
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+deps <- c("ggplot2", "tidyr", "dplyr", "knitr", "rmarkdown", "boot", "gridExtra", "ISLR", "glmnet", "reshape2", "caret", "HDInterval", "rstan")
+for (p in deps) {
+  if (!requireNamespace(p, quietly = TRUE)) {
+    install.packages(p, repos = "https://cran.rstudio.com", dependencies = TRUE)
+  }
+  library(p, character.only = TRUE)
+}
+
+options(scipen=999)
+```
+
+```{r, echo=TRUE}
+set.seed(11912007)
+```
+
+# Task 1
+
+We recalculate the estimation of the prevalence of Covid19 in spring 2020. Samples from 1279 persons were analysed with PCR testing procedures. Out of all those not a single randomly selected person was tested positively. This obviously breaks standard testing mechanisms for extimating the proportion of infected person in Austria.
+
+However, additional information is available from similar tests in Germany which had a comparable behaviour of the spread of the disease at that time. In the same time span 4 positive cases out of 4068 had been found.
+
+### 1.1 Build a Beta prior distribution for this Binomial scenario, which encodes the information of the German study. Reweight both parameters compared to the original counts with a factor of $\frac{1}{10}$. Build the corresponding Binomial model for the number of people suffering from the disease based on the 1279 test. Obtain the theoretical posterior distribution for this scenario.
+
+To recalculate the estimation of Covid-19 prevalence in Austria during spring 2020, we'll follow a Bayesian approach with a Beta-Binomial model. We'll use the German study data to create an informative prior, then update it with the Austrian data to obtain a posterior distribution.
+
+```{r, echo=TRUE, fig.width=13, fig.height=5}
+# 
+# german study data (prior)
+# 
+
+positives_germany <- 4
+sample_size_germany <- 4068
+
+# alpha and beta parameters for the Beta prior
+alpha_prior <- positives_germany + 1  # successes + 1 for prior
+beta_prior <- sample_size_germany - positives_germany + 1  # failures + 1 for prior
+
+# reweight the parameters with a factor of 1/10
+reweight_factor <- 1 / 10
+alpha_prior_weighted <- alpha_prior * reweight_factor
+beta_prior_weighted <- beta_prior * reweight_factor
+
+cat("Weighted prior parameters:\n")
+cat("Alpha:", alpha_prior_weighted, "\n")
+cat("Beta:", beta_prior_weighted, "\n\n")
+
+# 
+# austrian study data (posterior)
+# 
+
+sample_size_austria <- 1279
+positives_austria <- 0
+
+# posterior parameters
+alpha_posterior <- alpha_prior_weighted + positives_austria
+beta_posterior <- beta_prior_weighted + (sample_size_austria - positives_austria)
+
+# mean prevalence estimate
+mean_prevalence <- alpha_posterior / (alpha_posterior + beta_posterior)
+
+cat("Posterior parameters:\n")
+cat("Alpha:", alpha_posterior, "\n")
+cat("Beta:", beta_posterior, "\n\n")
+cat("Mean prevalence estimate:", mean_prevalence, "\n")
+```
+
+### 1.2 Plot the posterior density and obtain the point estimators and 95% Highest posterior density interval of the prevalence of Covid19 (=proportion of inhabitants suffering from the disease).
+
+```{r, echo=TRUE, fig.width=13, fig.height=5}
+# 
+# plot
+# 
+
+x <- seq(0, 0.00000001, length.out = 1000)
+prior <- dbeta(x, alpha_prior_weighted, beta_prior_weighted)
+posterior <- dbeta(x, alpha_posterior, beta_posterior)
+
+df <- data.frame(
+  x = rep(x, 2),
+  density = c(prior, posterior),
+  distribution = rep(c("Prior", "Posterior"), each = length(x))
+)
+
+ggplot(df, aes(x = x, y = density, color = distribution)) +
+  geom_line() +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 0.00000001)) +
+  labs(title = "Prior and Posterior Beta Distributions",
+       x = "Prevalence",
+       y = "Density") +
+  theme_minimal()
+
+# 
+# point estimators and HPD interval
+# 
+
+# point estimators
+mean_prevalence <- alpha_posterior / (alpha_posterior + beta_posterior)
+median_prevalence <- qbeta(0.5, alpha_posterior, beta_posterior)
+mode_prevalence <- (alpha_posterior - 1) / (alpha_posterior + beta_posterior - 2)
+
+# 95% Highest Posterior Density HPD interval
+hpd_interval <- hdi(qbeta, shape1 = alpha_posterior, shape2 = beta_posterior)
+
+# Print results
+cat("Point Estimators:\n")
+cat("Mean prevalence:", mean_prevalence, "\n")
+cat("Median prevalence:", median_prevalence, "\n")
+cat("Mode prevalence:", mode_prevalence, "\n\n")
+cat("95% Highest Posterior Density Interval:\n")
+cat("Lower bound:", hpd_interval[1], "\n")
+cat("Upper bound:", hpd_interval[2], "\n")
+```
+
+The posterior distribution shows a highly skewed shape with a peak near zero, indicating a very low estimated prevalence of Covid-19 based on the Austrian study data. The mean prevalence is extremely low, which is consistent with the observation of zero positive cases in the Austrian sample.
+
+The 95% Highest Posterior Density interval provides a range of plausible values for the true prevalence, with the lower bound being very close to zero and the upper bound also being quite low. This suggests that while the true prevalence is likely very low, there is still some uncertainty in the exact value due to the limited sample size and the influence of the prior information from the German study.
+
+### 1.3 Explain why Statistik Austria chose this method instead of simulationbased or frequentist inference for obtaining intervals of the prevalence.
+
+Statistik Austria chose a Bayesian approach for estimating the prevalence of Covid-19 in spring 2020 due to several advantages it offers over simulation-based or frequentist inference methods.
+
+The Bayesian method allows for the incorporation of prior knowledge, which is particularly useful in this case where data from Germany provided valuable information about the spread of the disease. By using the German data as a prior, Statistik Austria could leverage this information to obtain more robust estimates for Austria, especially given the absence of positive cases in the Austrian sample.
+
+Bayesian methods are also well-suited for handling small sample sizes and rare events, which is relevant in this scenario where no positive cases were found in Austria. Traditional frequentist methods might struggle to provide meaningful confidence intervals in such cases, potentially leading to truncation issues at zero.
+
+Furthermore, Bayesian analysis provides a more intuitive interpretation of results through posterior probability distributions. This allows for a more nuanced understanding of the uncertainty surrounding the prevalence estimate, which is particularly important when dealing with public health data where precise communication of uncertainty is crucial.
+
+Lastly, Bayesian methods offer flexibility in updating estimates as new data becomes available, making them well-suited for ongoing surveillance efforts during a pandemic. This approach allows for continuous refinement of prevalence estimates as more information is gathered over time.
+
+# Task 2
+
+We revisit linear models and their residual distributions.
+
+We know that the distribution of residuals is assumed to be normal. Therefore, the Bayesian linear modelling will assume a normal distribution for the data $y \sim N(x^T\beta, \sigma^2)$.
+
+For a single explanatory variable scenario, we will therefore consider the inference of the linear model's coefficient $\beta$ and the residual variance $\sigma^2$.
+
+### 2.1 Define conjugate priors for the coefficient parameter and the residual variance independently. Explain how the parameters can be set to be uninformative. Compare different choice of prior parameters.
+
+The conjugate prior for $\beta$ is a normal distribution with mean $\mu_0$ and precision $\tau_0$ (where precision is the inverse of variance). To make this prior uninformative we have to (2) set $\mu_0 = 0$, centering the prior at zero and (2) choose a small value for $\tau_0$ (e.g., 0.001), which results in a large variance, making the prior very diffuse.
+
+The conjugate prior for $\sigma^2$ is an Inverse-Gamma distribution with shape $\alpha_0$ and rate $\beta_{0}$. To make this prior uninformative we have to set both $\alpha_0$ and $\beta_0$ to small values (e.g., 0.001).
+
+```{r, echo=TRUE, fig.width=13, fig.height=5}
+beta_prior <- function(mu_0, tau_0) {
+  function(x) dnorm(x, mean = mu_0, sd = sqrt(1/tau_0))
+}
+sigma2_prior <- function(alpha_0, beta_0) {
+  function(x) dgamma(1/x, shape = alpha_0, rate = beta_0) * (1/x^2)
+}
+
+beta_informative <- beta_prior(mu_0 = 2, tau_0 = 10)
+beta_moderately_informative <- beta_prior(mu_0 = 1, tau_0 = 1)
+beta_uninformative <- beta_prior(mu_0 = 0, tau_0 = 0.001)
+
+sigma2_informative <- sigma2_prior(alpha_0 = 5, beta_0 = 5)
+sigma2_moderately_informative <- sigma2_prior(alpha_0 = 1, beta_0 = 1)
+sigma2_uninformative <- sigma2_prior(alpha_0 = 0.001, beta_0 = 0.001)
+
+ggplot(data.frame(x = c(-5, 5)), aes(x)) +
+  stat_function(fun = beta_uninformative, aes(color = "Uninformative")) +
+  stat_function(fun = beta_informative, aes(color = "Informative")) +
+  stat_function(fun = beta_moderately_informative, aes(color = "Moderately Informative")) +
+  labs(title = "Comparison of beta Priors", x = "beta", y = "Density") +
+  theme_minimal()
+
+ggplot(data.frame(x = c(0, 5)), aes(x)) +
+  stat_function(fun = sigma2_uninformative, aes(color = "Uninformative")) +
+  stat_function(fun = sigma2_informative, aes(color = "Informative")) +
+  stat_function(fun = sigma2_moderately_informative, aes(color = "Moderately Informative")) +
+  labs(title = "Comparison of sigma^2 Priors", x = "sigma^2", y = "Density") +
+  theme_minimal()
+```
+
+These plots visually demonstrate the differences between uninformative, moderately informative, and informative priors for both $\beta$ and $\sigma^2$. The uninformative priors are be very flat and spread out, indicating little prior knowledge. The informative priors will be more peaked and concentrated, suggesting stronger prior beliefs about the parameter values. The moderately informative priors will fall somewhere in between.
+
+It's important to note that the choice of priors can significantly impact the posterior distribution, especially when the sample size is small. As the sample size increases, the influence of the prior diminishes, and the likelihood dominates the posterior distribution.
+
+### 2.2 Build the corresponding normal model for the regression inference. Obtain the *theoretical* posterior distribution for both parameters separately assuming the other one to be "known".
+
+In Bayesian linear regression with a single explanatory variable, we indeed assume that the data follows a normal distribution, $y \sim N(x^T\beta, \sigma^2)$, where $\beta$ is the regression coefficient and $\sigma^2$ is the residual variance.
+
+To build the corresponding normal model for regression inference, we start by specifying the likelihood function. Given the normal distribution assumption, the likelihood function for a single observation $y_i$ is:
+
+$$P(y_i | x_i, \beta, \sigma^2) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(y_i - x_i^T\beta)^2}{2\sigma^2}\right)$$
+
+For the entire dataset of n observations, the likelihood function becomes:
+
+$$P(y | X, \beta, \sigma^2) = \prod_{i=1}^n \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(y_i - x_i^T\beta)^2}{2\sigma^2}\right)$$
+
+To obtain the theoretical posterior distribution for $\beta$ assuming $\sigma^2$ is known, we need to specify a prior distribution for $\beta$. A common choice is a normal prior, $\beta \sim N(\mu_0, \tau_0^2)$, where $\mu_0$ and $\tau_0^2$ are the prior mean and variance, respectively. Applying Bayes' theorem, the posterior distribution for $\beta$ given known $\sigma^2$ is:
+
+$$P(\beta | y, X, \sigma^2) \propto P(y | X, \beta, \sigma^2) P(\beta)$$
+
+This results in a normal posterior distribution for $\beta$:
+
+$$\beta | y, X, \sigma^2 \sim N(\mu_n, \tau_n^2)$$
+
+Where:
+
+- $\mu_n = \frac{\tau_0^2 X^Ty + \sigma^2\mu_0}{\tau_0^2 X^TX + \sigma^2}$
+- $\tau_n^2 = \frac{\sigma^2\tau_0^2}{\tau_0^2 X^TX + \sigma^2}$
+
+For the theoretical posterior distribution of $\sigma^2$ assuming $\beta$ is known, we typically use an inverse-gamma prior, $\sigma^2 \sim IG(a_0, b_0)$, where $a_0$ and $b_0$ are the shape and scale parameters, respectively. Applying Bayes' theorem, the posterior distribution for $\sigma^2$ given known $\beta$ is:
+
+$$P(\sigma^2 | y, X, \beta) \propto P(y | X, \beta, \sigma^2) P(\sigma^2)$$
+
+This results in an inverse-gamma posterior distribution for $\sigma^2$:
+
+$$\sigma^2 | y, X, \beta \sim IG(a_n, b_n)$$
+
+Where:
+
+- $a_n = a_0 + \frac{n}{2}$
+- $b_n = b_0 + \frac{1}{2}\sum_{i=1}^n (y_i - x_i^T\beta)^2$
+
+It's important to note that in practice, we often need to estimate both $\beta$ and $\sigma^2$ simultaneously, which requires more complex methods such as Markov Chain Monte Carlo (MCMC) sampling. The separate posterior distributions derived here provide insight into the structure of the problem but are simplified versions of the joint posterior distribution of both parameters.
+
+### 2.3 Provide the formulae for point estimators and 95% Highest posterior density interval of the regression parameters separately assuming the other one to be "known".
+
+In Bayesian linear regression with a single explanatory variable, we assume $y \sim N(x^T\beta, \sigma^2)$. For inference on the coefficient $\beta$ and residual variance $\sigma^2$, we can derive point estimators and 95% highest posterior density (HPD) intervals.
+
+Assuming $\sigma^2$ is known, the point estimate for $\beta$ is given by $\hat{\beta} = (X^TX)^{-1}X^Ty$, where $X$ is the design matrix and $y$ is the vector of responses. The 95% HPD interval for $\beta$ can be expressed as $\hat{\beta} \pm t_{n-2,0.975} \cdot \sqrt{\hat{\sigma}^2(X^TX)^{-1}}$, where $t_{n-2,0.975}$ is the 97.5th percentile of the t-distribution with $n-2$ degrees of freedom.
+
+When $\beta$ is assumed known, the point estimate for $\sigma^2$ is $\hat{\sigma}^2 = \frac{1}{n-2}(y - X\beta)^T(y - X\beta)$. The 95% HPD interval for $\sigma^2$ can be computed as $[\frac{(n-2)\hat{\sigma}^2}{\chi^2_{n-2,0.975}}, \frac{(n-2)\hat{\sigma}^2}{\chi^2_{n-2,0.025}}]$, where $\chi^2_{n-2,0.975}$ and $\chi^2_{n-2,0.025}$ are the 97.5th and 2.5th percentiles of the chi-square distribution with $n-2$ degrees of freedom, respectively.
+
+These formulae provide a way to estimate and quantify uncertainty in the regression parameters within the Bayesian framework, allowing for more comprehensive inference compared to traditional frequentist approaches.
+
+### 2.4 Test this with the dataset `Auto` and model `mpg ~ horsepower`. Compare the Bayesian against the frequentist results.
+
+```{r, echo=TRUE, fig.width=13, fig.height=5}
+data(Auto, package = "ISLR")
+
+# 
+# frequentist linear model
+# 
+
+lm_model <- lm(mpg ~ horsepower, data = Auto)
+library(boot)
+cv_error <- cv.glm(Auto, glm(mpg ~ horsepower, data = Auto), K = nrow(Auto)) # LOOCV was most efficient in exercise 6
+cat("Linear model MSE error:", cv_error$delta[1], "\n")
+
+freq_intercept <- coef(lm_model)[1]
+freq_slope <- coef(lm_model)[2]
+freq_sigma <- summary(lm_model)$sigma
+
+# 
+# baysesian (stan) model
+# 
+
+stan_model <- "
+data {
+  int<lower=0> N;
+  vector[N] x;
+  vector[N] y;
+}
+parameters {
+  real beta0;
+  real beta1;
+  real<lower=0> sigma;
+}
+model {
+  // Priors
+  beta0 ~ normal(0, 100);
+  beta1 ~ normal(0, 100);
+  sigma ~ cauchy(0, 5);
+  
+  // Likelihood
+  y ~ normal(beta0 + beta1 * x, sigma);
+}
+"
+stan_data <- list(
+  N = nrow(Auto),
+  x = Auto$horsepower,
+  y = Auto$mpg
+)
+fit <- stan(model_code = stan_model, data = stan_data, chains = 4, iter = 2000)
+print(fit, pars = c("beta0", "beta1", "sigma"))
+posterior <- extract(fit)
+
+bayes_intercept <- mean(posterior$beta0)
+bayes_slope <- mean(posterior$beta1)
+bayes_sigma <- mean(posterior$sigma)
+
+# 
+# comparison
+# 
+
+cat("Frequentist Intercept:", freq_intercept, "\n")
+cat("Bayesian Intercept:", bayes_intercept, "\n\n")
+cat("Frequentist Slope:", freq_slope, "\n")
+cat("Bayesian Slope:", bayes_slope, "\n\n")
+cat("Frequentist Sigma:", freq_sigma, "\n")
+cat("Bayesian Sigma:", bayes_sigma, "\n")
+
+par(mfrow = c(2, 2))
+hist(posterior$beta0, main = "Posterior for Intercept", xlab = "beta 0")
+abline(v = freq_intercept, col = "red", lwd = 2)
+hist(posterior$beta1, main = "Posterior for Slope", xlab = "beta 1")
+abline(v = freq_slope, col = "red", lwd = 2)
+hist(posterior$sigma, main = "Posterior for Sigma", xlab = "sigma ")
+abline(v = freq_sigma, col = "red", lwd = 2)
+
+ggplot(Auto, aes(x = horsepower, y = mpg)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(intercept = freq_intercept, slope = freq_slope, color = "red", linetype = "dashed") +
+  geom_abline(intercept = bayes_intercept, slope = bayes_slope, color = "blue") +
+  labs(title = "MPG vs Horsepower", subtitle = "Red: Frequentist, Blue: Bayesian") +
+  theme_minimal()
+```
+
+In conclusion, for this simple linear regression problem with a large dataset, the Bayesian and frequentist approaches yield very similar results. This is expected for a simple linear regression with a large sample size and uninformative priors. The main advantage of the Bayesian approach is the full posterior distribution for each parameter, which provides a more comprehensive view of the uncertainty in the estimates. However, the computational cost of the Bayesian approach is higher, especially for more complex models or larger datasets.
+
+To be more specific: The Bayesian and frequentist approaches yield very similar estimates for the intercept, slope, and residual standard deviation. The residual standard deviation ($\sigma$) is similar for both approaches, indicating comparable model fit. The histograms of the posterior distributions show the uncertainty around the parameter estimates. The red lines representing the frequentist estimates fall within the high-density regions of these distributions, indicating agreement between the methods.
