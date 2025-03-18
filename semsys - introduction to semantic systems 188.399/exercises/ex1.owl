@@ -1,0 +1,212 @@
+@prefix : <http://example.org/music#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+#
+# ontology declaration
+#
+
+<http://example.org/music> rdf:type owl:Ontology ;
+    rdfs:label "Music Domain Ontology"@en ;
+    rdfs:comment "An ontology for describing music-related concepts including artists, albums, songs, and events."@en .
+
+#
+# classes
+#
+
+:Artist rdf:type owl:Class ;
+    rdfs:label "Artist"@en ;
+    rdfs:comment "A person or group that creates or performs music"@en .
+
+:SoloArtist rdf:type owl:Class ;
+    rdfs:subClassOf :Artist ;
+    rdfs:label "Solo Artist"@en ;
+    rdfs:comment "An individual musician or performer"@en .
+
+:Band rdf:type owl:Class ;
+    rdfs:subClassOf :Artist ;
+    rdfs:label "Band"@en ;
+    rdfs:comment "A group of musicians performing together"@en .
+
+:Album rdf:type owl:Class ;
+    rdfs:label "Album"@en ;
+    rdfs:comment "A collection of songs released as a single unit"@en .
+
+:Song rdf:type owl:Class ;
+    rdfs:label "Song"@en ;
+    rdfs:comment "A musical composition"@en .
+
+:Genre rdf:type owl:Class ;
+    rdfs:label "Genre"@en ;
+    rdfs:comment "A category of musical style"@en .
+
+:MusicEvent rdf:type owl:Class ;
+    rdfs:label "Music Event"@en ;
+    rdfs:comment "A musical performance or gathering"@en .
+
+:Concert rdf:type owl:Class ;
+    rdfs:subClassOf :MusicEvent ;
+    rdfs:label "Concert"@en ;
+    rdfs:comment "A live musical performance"@en .
+
+:Festival rdf:type owl:Class ;
+    rdfs:subClassOf :MusicEvent ;
+    rdfs:label "Festival"@en ;
+    rdfs:comment "A large-scale music event featuring multiple artists"@en .
+
+:Venue rdf:type owl:Class ;
+    rdfs:label "Venue"@en ;
+    rdfs:comment "A location where music events take place"@en .
+
+:Award rdf:type owl:Class ;
+    rdfs:label "Award"@en ;
+    rdfs:comment "A recognition or honor given for musical achievement"@en .
+
+:RecordLabel rdf:type owl:Class ;
+    rdfs:label "Record Label"@en ;
+    rdfs:comment "A company that produces and distributes music"@en .
+
+:Instrument rdf:type owl:Class ;
+    rdfs:label "Instrument"@en ;
+    rdfs:comment "A musical instrument used in performances or recordings"@en .
+
+:Playlist rdf:type owl:Class ;
+    rdfs:label "Playlist"@en ;
+    rdfs:comment "A curated collection of songs"@en .
+
+:Producer rdf:type owl:Class ;
+    rdfs:label "Producer"@en ;
+    rdfs:comment "A person who directs and manages the recording of music"@en .
+
+#
+# object properties
+#
+
+:hasGenre rdf:type owl:ObjectProperty ;
+    rdfs:domain :Song ;
+    rdfs:range :Genre ;
+    rdfs:label "has genre"@en ;
+    rdfs:comment "Connects a song to its musical genre"@en .
+
+:performedBy rdf:type owl:ObjectProperty ;
+    rdfs:domain :Song ;
+    rdfs:range :Artist ;
+    rdfs:label "performed by"@en ;
+    rdfs:comment "Connects a song to its performing artist"@en .
+
+:producedBy rdf:type owl:ObjectProperty ;
+    rdfs:domain :Album ;
+    rdfs:range :Producer ;
+    rdfs:label "produced by"@en ;
+    rdfs:comment "Connects an album to its producer"@en .
+
+:isPartOf rdf:type owl:ObjectProperty ;
+    rdfs:domain :Song ;
+    rdfs:range :Album ;
+    rdfs:label "is part of"@en ;
+    rdfs:comment "Connects a song to its album"@en .
+
+:performsAt rdf:type owl:ObjectProperty ;
+    rdfs:domain :Artist ;
+    rdfs:range :MusicEvent ;
+    rdfs:label "performs at"@en ;
+    rdfs:comment "Connects an artist to an event where they perform"@en .
+
+:hasVenue rdf:type owl:ObjectProperty ;
+    rdfs:domain :MusicEvent ;
+    rdfs:range :Venue ;
+    rdfs:label "has venue"@en ;
+    rdfs:comment "Connects an event to its venue"@en .
+
+:memberOf rdf:type owl:ObjectProperty ;
+    rdfs:domain :SoloArtist ;
+    rdfs:range :Band ;
+    rdfs:label "member of"@en ;
+    rdfs:comment "Connects a musician to their band"@en .
+
+:signedTo rdf:type owl:ObjectProperty ;
+    rdfs:domain :Artist ;
+    rdfs:range :RecordLabel ;
+    rdfs:label "signed to"@en ;
+    rdfs:comment "Connects an artist to their record label"@en .
+
+:plays rdf:type owl:ObjectProperty ;
+    rdfs:domain :Artist ;
+    rdfs:range :Instrument ;
+    rdfs:label "plays"@en ;
+    rdfs:comment "Connects an artist to instruments they play"@en .
+
+:contains rdf:type owl:ObjectProperty ;
+    rdfs:domain :Playlist ;
+    rdfs:range :Song ;
+    rdfs:label "contains"@en ;
+    rdfs:comment "Connects a playlist to its songs"@en .
+
+#
+# data properties
+#
+
+:hasReleaseDate rdf:type owl:DatatypeProperty ;
+    rdfs:domain :Album ;
+    rdfs:range xsd:date ;
+    rdfs:label "has release date"@en ;
+    rdfs:comment "The date when an album was released"@en .
+
+:hasDuration rdf:type owl:DatatypeProperty ;
+    rdfs:domain :Song ;
+    rdfs:range xsd:duration ;
+    rdfs:label "has duration"@en ;
+    rdfs:comment "The length of a song"@en .
+
+:hasCapacity rdf:type owl:DatatypeProperty ;
+    rdfs:domain :Venue ;
+    rdfs:range xsd:integer ;
+    rdfs:label "has capacity"@en ;
+    rdfs:comment "The maximum capacity of a venue"@en .
+
+:hasName rdf:type owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "has name"@en ;
+    rdfs:comment "The name of any entity in the ontology"@en .
+
+:hasEventDate rdf:type owl:DatatypeProperty ;
+    rdfs:domain :MusicEvent ;
+    rdfs:range xsd:dateTime ;
+    rdfs:label "has event date"@en ;
+    rdfs:comment "The date and time of a music event"@en .
+
+#
+# owl assertions
+#
+
+# disjoint classes
+:SoloArtist owl:disjointWith :Band .
+:Concert owl:disjointWith :Festival .
+
+# property characteristics
+:memberOf rdf:type owl:AsymmetricProperty .
+:performedBy rdf:type owl:InverseFunctionalProperty .
+
+# cardinality constraints
+:Album rdfs:subClassOf [
+    rdf:type owl:Restriction ;
+    owl:onProperty :producedBy ;
+    owl:minCardinality "1"^^xsd:nonNegativeInteger
+] .
+
+# property chain
+:hasHeadliner rdf:type owl:ObjectProperty ;
+    owl:propertyChainAxiom (:hasVenue :performsAt) .
+
+# value restrictions
+:Festival rdfs:subClassOf [
+    rdf:type owl:Restriction ;
+    owl:onProperty :hasCapacity ;
+    owl:someValuesFrom [
+        rdf:type rdfs:Datatype ;
+        owl:onDatatype xsd:integer ;
+        owl:withRestrictions ([xsd:minInclusive "1000"^^xsd:integer])
+    ]
+] .

@@ -1,0 +1,235 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix film: <http://semantics.id/ns/example/film#> .
+
+film:FilmShape
+    a sh:NodeShape ;
+    sh:targetClass film:Film ;
+    sh:property [
+        sh:path rdfs:label ;
+    ] ;
+    sh:property [
+        sh:path film:releaseYear ;
+    ] ;
+    sh:property [
+        sh:path film:budget ;
+    ] ;
+    sh:property [
+        sh:path film:duration ;
+    ] ;
+    sh:property [
+        sh:path film:id ;
+    ] ;
+    sh:property [
+        sh:path film:isAdultFilm ;
+    ] ;
+    sh:property [
+        sh:path film:homepage ;
+        sh:pattern "^https?://.*" ;
+    ] ;
+    sh:property [
+        sh:path film:hasIMDBResource ;
+        sh:class film:IMDBResource ;
+    ] ;
+    sh:property [
+        sh:path film:description ;
+    ] ;
+    sh:property [
+        sh:path film:keyword ;
+    ] ;
+    sh:property [
+        sh:path film:tagline ;
+    ] ;
+    sh:property [
+        sh:path film:original_language ;
+    ] ;
+    sh:property [
+        sh:path film:popularity ;
+    ] ;
+    sh:property [
+        sh:path film:originalTitle ;
+    ] ;
+    sh:property [
+        sh:path film:hasFilmStudio ;
+        # sh:class film:FilmStudio ; -> fails because of: http://semantics.id/ns/example#LesFilmsDuLosange
+    ] ;
+    sh:property [
+        sh:path film:hasGenre ;
+        sh:class film:Genre ;
+        sh:node film:PersonShape ;
+    ] ;
+    sh:property [
+        sh:path film:hasDirector ;
+        sh:class film:Director ;
+        sh:node film:PersonShape ;
+    ] ;
+    sh:property [
+        sh:path film:hasScriptWriter ;
+        sh:class film:ScriptWriter ;
+        sh:node film:PersonShape ;
+    ] ;
+    sh:property [
+        sh:path film:hasActor ;
+        sh:class film:Actor ;
+        sh:node film:PersonShape ;
+    ] ;
+    sh:property [
+        sh:path film:hasEditor ;
+        sh:class film:Editor ;
+        sh:node film:PersonShape ;
+    ] ;
+    sh:property [
+        sh:path film:hasCast ;
+        sh:class film:Cast ;
+    ] ;
+    sh:property [
+        sh:path film:hasSpokenLanguage ;
+    ] ;
+    sh:property [
+        sh:path film:hasProductionCountry ;
+    ] .
+
+film:IMDBResourceShape
+    a sh:NodeShape ;
+    sh:targetClass film:IMDBResource ;
+    sh:property [
+        sh:path film:id ;
+        sh:minCount 1 ;
+    ] ;
+    sh:property [
+        sh:path film:url ;
+    ] ;
+    sh:property [
+        sh:path film:vote_average ;
+    ] ;
+    sh:property [
+        sh:path film:vote_count ;
+    ] .
+
+film:PersonShape
+    a sh:NodeShape ;
+    sh:targetClass film:Actor, film:Director, film:ScriptWriter, film:Editor ;
+    sh:property [
+        sh:path film:fullName ;
+    ] ;
+    sh:property [
+        sh:path film:gender ;
+        sh:in ("male" "female" "other" "0" "1" "2") ;
+    ] .
+
+film:GenreShape
+    a sh:NodeShape ;
+    sh:targetClass film:Genre ;
+    sh:property [
+        sh:path film:id ;
+    ] ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:uniqueLang true ;
+    ] .
+
+film:FilmStudioShape
+    a sh:NodeShape ;
+    sh:targetClass film:FilmStudio ;
+    sh:property [
+        sh:path film:id ;
+    ] ;
+    sh:property [
+        sh:path rdfs:label ;
+    ] .
+
+film:CastShape
+    a sh:NodeShape ;
+    sh:targetClass film:Cast ;
+    sh:property [
+        sh:path film:hasCastActor ;
+        sh:class film:Actor ;
+        sh:node film:PersonShape ;
+        sh:minCount 1 ;
+    ] ;
+    sh:property [
+        sh:path film:hasCastCharacter ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+    ] .
+
+# 
+# advanced constraints
+# 
+
+film:UniqueGenreLabelShape
+    a sh:NodeShape ;
+    sh:targetClass film:Film ;
+    sh:property [
+        sh:path (film:hasGenre rdfs:label) ;
+        sh:uniqueLang true ;
+        sh:message "genre labels must be unique per language" ;
+    ] .
+
+film:FilmCrewShape
+    a sh:NodeShape ;
+    sh:targetClass film:Film ;
+    sh:property [
+        sh:path [
+            sh:alternativePath (
+                film:hasDirector
+                film:hasScriptWriter
+                film:hasActor
+                film:hasEditor
+            )
+        ] ;
+        sh:node film:PersonShape ;
+        sh:message "all crew members must comply with person validation rules" ;
+    ] .
+
+film:UniqueCastShape
+    a sh:NodeShape ;
+    sh:targetClass film:Cast ;
+    sh:property [
+        sh:path film:hasCastActor ;
+        sh:uniqueLang true ;
+        sh:maxCount 1 ;
+        sh:property [
+            sh:path film:hasCastCharacter ;
+            sh:uniqueLang true ;
+            sh:maxCount 1
+        ] ;
+        sh:message "cast members must be unique" ;
+    ] .
+
+film:LanguageConsistencyShape
+    a sh:NodeShape ;
+    sh:targetClass film:Film ;
+    sh:property [
+        sh:path film:hasSpokenLanguage ;
+        sh:property [
+            sh:path film:original_language ;
+            sh:in ( film:hasSpokenLanguage )
+        ] ;
+        sh:message "spoken language must be one of the film's original languages" ;
+    ] .
+
+film:DirectorActorShape
+    a sh:NodeShape ;
+    sh:targetClass film:Film ;
+    sh:property [
+        sh:path film:hasDirector ;
+        sh:name "Director Acting Check" ;
+        sh:message "If director acts in film, they must also be listed as actor" ;
+        sh:sparql [
+            sh:select """
+                PREFIX film: <http://semantics.id/ns/example/film#>
+                SELECT $this
+                WHERE {
+                    $this film:hasDirector ?person .
+                    $this film:hasCast ?cast .
+                    ?cast film:hasCastActor ?person .
+                    FILTER NOT EXISTS { 
+                        $this film:hasActor ?person 
+                    }
+                }
+            """ ;
+        ] ;
+        sh:message "if director acts in film, they must also be listed as actor" ;
+    ] .
