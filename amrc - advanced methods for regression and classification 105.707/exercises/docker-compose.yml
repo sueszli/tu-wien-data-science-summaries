@@ -1,0 +1,67 @@
+# this container just serves to install the `klaR` package
+# 
+# usage:
+# 
+#   $ docker compose up -d
+#   $ docker compose exec main Rscript -e "rmarkdown::render('ex7.rmd', output_format = 'pdf_document')"
+# 
+# or alternatively:
+# 
+#   $ brew install gcc
+#   $ mkdir -p ~/.R
+#   $ echo "FC = /opt/homebrew/bin/gfortran # check with `which gfortran`
+#   $ F77 = /opt/homebrew/bin/gfortran
+#   $ FLIBS = -L/opt/homebrew/lib" > ~/.R/Makevars
+# 
+# and then just:
+# 
+# ```R
+# Sys.setenv(PATH=paste("/opt/homebrew/bin", Sys.getenv("PATH"), sep=":"))
+# install.packages(c("classInt", "questionr", "klaR"), type="source")
+# ```
+
+services:
+  main:
+    container_name: main
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+    working_dir: /workspace
+    ports:
+      - '8888:8888'
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM --platform=linux/amd64 ubuntu:20.04
+
+        ARG DEBIAN_FRONTEND=noninteractive
+        RUN apt-get clean && rm -rf /var/lib/apt/lists/* && apt-get update
+        RUN apt-get install -y ca-certificates
+        RUN update-ca-certificates
+
+        # pandoc
+        RUN apt-get install -y --no-install-recommends pandoc texlive-latex-base texlive-fonts-recommended
+        RUN apt-get install -y --no-install-recommends texlive-latex-extra texlive-xetex texlive-lang-japanese
+        RUN apt-get install -y --no-install-recommends texlive-fonts-extra texlive-lang-cjk texlive-latex-recommended texlive-bibtex-extra
+        RUN apt-get install -y --no-install-recommends texlive-science texlive-pictures biber libfreetype6-dev libfontconfig1-dev
+        RUN apt-get install -y --no-install-recommends lmodern
+
+        # fortran 9
+        RUN apt-get install -y gfortran-9
+        RUN update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-9 100
+        
+        # r
+        RUN apt-get clean
+        RUN apt-get autoremove
+        RUN apt-get update
+        RUN apt-get install -y --no-install-recommends r-base r-base-dev
+        RUN apt-get install -y automake build-essential zlib1g-dev r-cran-httpuv
+        
+        # rmd
+        RUN Rscript -e 'pkgs <- c("rmarkdown", "ISLR", "IRkernel", "knitr", "kableExtra"); for (p in pkgs) if (!requireNamespace(p, quietly = TRUE)) install.packages(p, repos = "https://cran.rstudio.com")'
+
+        # klaR
+        RUN Rscript -e 'pkgs <- c("klaR", "e1071", "MASS", "ggplot2", "dplyr", "tidyr", "readr", "stringr"); for (p in pkgs) if (!requireNamespace(p, quietly = TRUE)) install.packages(p, repos = "https://cran.rstudio.com")'
+
+        CMD ["tail", "-f", "/dev/null"]

@@ -1,0 +1,246 @@
+---
+title: "AMRC: Exercise 7 - 11912007"
+output: pdf_document
+documentclass: article
+papersize: a4
+pagestyle: empty
+geometry:
+    - top=5mm
+    - bottom=5mm
+    - left=5mm
+    - right=5mm
+header-includes:
+    # title
+    - \usepackage{titling}
+    - \setlength{\droptitle}{-15pt}
+    - \pretitle{\vspace{-30pt}\begin{center}\LARGE}
+    - \posttitle{\end{center}\vspace{-30pt}}    
+    # content
+    - \usepackage{scrextend}
+    - \changefontsizes[8pt]{8pt}
+    # code
+    - \usepackage{fancyvrb}
+    - \fvset{fontsize=\fontsize{6pt}{6pt}\selectfont}
+    - \usepackage{listings}
+    - \lstset{basicstyle=\fontsize{6pt}{6pt}\selectfont\ttfamily}
+    # code output
+    - \DefineVerbatimEnvironment{verbatim}{Verbatim}{fontsize=\fontsize{6pt}{6pt}}
+---
+
+<!-- https://tuwel.tuwien.ac.at/pluginfile.php/4255493/mod_resource/content/8/ex7.pdf -->
+
+# Analysis
+
+For the bank marketing dataset analysis, the logistic regression model reveals several interesting patterns. The initial unweighted model achieved a balanced accuracy of 0.5906, with notably high specificity (0.9846) but poor sensitivity (0.1966). This indicates a strong class imbalance problem where the model excels at identifying "no" cases but struggles with "yes" cases.
+
+When weights were introduced to address the class imbalance, the balanced accuracy improved to 0.6891. The weighted model showed more balanced performance between sensitivity (0.6398) and specificity (0.7383), demonstrating better prediction capabilities for both classes. The weights were calculated by giving equal importance to both classes, effectively compensating for the imbalanced class distribution.
+
+The stepwise variable selection process actually led to a slight decrease in balanced accuracy to 0.6375. While it improved specificity to 0.8960, it reduced sensitivity to 0.3790. The final model retained key variables including age, job, marital status, education, default status, balance, housing, loan, contact, day of week, month, campaign, and previous.
+
+For the Khan dataset analysis, LDA and QDA would not work effectively because the number of predictors (2308 gene expressions) greatly exceeds the number of observations, leading to singular covariance matrices. The multinomial logistic regression with LASSO regularization proved more suitable for this high-dimensional dataset.
+
+The cv.glmnet analysis with multinomial family yielded an optimal lambda value of 0.0652. The model achieved perfect classification on the test set, with a confusion matrix showing no misclassifications. Each tumor type was correctly identified, resulting in balanced accuracy, sensitivity, and specificity all equal to 1.
+
+The variable selection through LASSO identified approximately 6 relevant genes per class. When plotting the expression levels of significant genes (like V1427) across different tumor types, clear separation between groups was observed, explaining the model's excellent performance.
+
+# Code
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+Sys.setenv(PATH=paste("/opt/homebrew/bin", Sys.getenv("PATH"), sep=":"))
+pkgs <- c("classInt", "questionr", "klaR")
+for (p in pkgs) {
+    if (!requireNamespace(p, quietly = TRUE)) install.packages(p, type="source")
+    library(p, character.only = TRUE)
+}
+
+pkgs <- c("ISLR", "Metrics", "readr", "ucimlrepo", "glmnet", "assertthat", "ggplot2")
+for (p in pkgs) {
+    if (!requireNamespace(p, quietly = TRUE)) install.packages(p, repos = "https://cran.rstudio.com")
+    library(p, character.only = TRUE)
+}
+
+options(scipen=999)
+set.seed(42)
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, fig.width=20, fig.height=6}
+bank <- fetch_ucirepo(id=222)
+X <- bank$data$features
+y <- bank$data$targets
+bank <- cbind(X, y)
+
+# 
+# preprocessing
+# 
+
+bank <- bank[, -which(colnames(bank) == "duration")] # based on assignment
+invisible(assert_that(sum(is.na(bank)) == 0)) # no missing vals
+invisible(assert_that(all(bank$y %in% c("yes", "no")))) # bool target
+bank$y <- as.factor(ifelse(bank$y == "no", 0, 1)) # convert to binary
+
+train_idx <- sample(nrow(bank), 3000)
+train_set <- bank[train_idx, ]
+test_set <- bank[-train_idx, ]
+
+# 
+# logistic regression
+# 
+
+model <- glm(y ~ ., data = train_set, family = "binomial")
+
+summary(model)
+
+predictions_prob <- predict(model, newdata = test_set, type = "response")
+predictions <- ifelse(predictions_prob > 0.5, 1, 0) # threshold
+predictions <- factor(predictions, levels = levels(test_set$y))
+
+conf_matrix <- table(Predicted = predictions, Actual = test_set$y)
+misclass_rate_0 <- 1 - conf_matrix[1,1] / sum(test_set$y == 0)
+misclass_rate_1 <- 1 - conf_matrix[2,2] / sum(test_set$y == 1)
+sensitivity <- conf_matrix[2,2] / sum(test_set$y == 1)
+specificity <- conf_matrix[1,1] / sum(test_set$y == 0)
+balanced_accuracy <- (sensitivity + specificity) / 2
+
+knitr::kable(data.frame(
+    "Metric" = c("Balanced Accuracy", "Sensitivity", "Specificity", "Missclass Rate: No", "Missclass Rate: Yes"),
+    "Value" = c(round(balanced_accuracy, 4), round(sensitivity, 4), round(specificity, 4), round(misclass_rate_0, 4), round(misclass_rate_1, 4))
+), row.names = FALSE)
+
+# 
+# weighted logistic regression
+# 
+
+n_0 <- sum(train_set$y == 0)
+n_1 <- sum(train_set$y == 1)
+weights <- ifelse(train_set$y == 0, 1/n_0 * length(train_set$y)/2, 1/n_1 * length(train_set$y)/2)
+scaled_weights <- round(weights * 1e6) # avoid numerical issues
+
+x <- model.matrix(y ~ ., train_set)[,-1]
+y <- train_set$y
+weighted_model <- cv.glmnet(x, y, family = "binomial", weights = scaled_weights)
+
+predictions_prob <- predict(weighted_model, newx=model.matrix(y ~ ., test_set)[,-1], s="lambda.min", type="response")
+predictions <- ifelse(predictions_prob > 0.5, 1, 0)
+predictions <- factor(predictions, levels = levels(test_set$y))
+
+conf_matrix <- table(Predicted = predictions, Actual = test_set$y)
+sensitivity <- conf_matrix[2,2] / sum(test_set$y == 1)
+specificity <- conf_matrix[1,1] / sum(test_set$y == 0)
+balanced_accuracy <- (sensitivity + specificity) / 2
+
+knitr::kable(data.frame(
+    "Metric" = c("Balanced Accuracy", "Sensitivity", "Specificity"),
+    "Value" = c(round(balanced_accuracy, 4), round(sensitivity, 4), round(specificity, 4))
+), row.names = FALSE)
+
+# 
+# stepwise variable selection
+# 
+
+weighted_glm <- glm(y ~ ., data = train_set, family = "binomial", weights = scaled_weights)
+stepwise_model <- step(weighted_glm, direction = "both", trace = FALSE)
+
+stepwise_predictions_prob <- predict(stepwise_model, newdata = test_set, type = "response")
+stepwise_predictions <- ifelse(stepwise_predictions_prob > 0.5, 1, 0)
+stepwise_predictions <- factor(stepwise_predictions, levels = levels(test_set$y))
+
+stepwise_conf_matrix <- table(Predicted = stepwise_predictions, Actual = test_set$y)
+stepwise_sensitivity <- stepwise_conf_matrix[2,2] / sum(test_set$y == 1)
+stepwise_specificity <- stepwise_conf_matrix[1,1] / sum(test_set$y == 0)
+stepwise_balanced_accuracy <- (stepwise_sensitivity + stepwise_specificity) / 2
+
+knitr::kable(data.frame(
+    "Metric" = c("Balanced Accuracy", "Sensitivity", "Specificity"),
+    "Original" = c(round(balanced_accuracy, 4), round(sensitivity, 4), round(specificity, 4)),
+    "Stepwise" = c(round(stepwise_balanced_accuracy, 4),round(stepwise_sensitivity, 4), round(stepwise_specificity, 4))
+), row.names = FALSE)
+
+formula(stepwise_model) # selected variables in reduced model
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, fig.width=20, fig.height=6}
+data("Khan")
+
+khan <- data(Khan)
+xtrain <- Khan$xtrain
+ytrain <- Khan$ytrain
+xtest <- Khan$xtest
+ytest <- Khan$ytest
+
+ytrain <- as.factor(ytrain)
+ytest <- as.factor(ytest)
+
+# 
+# multinomial logistic regression
+# 
+
+cv_fit <- cv.glmnet(x = xtrain, y = ytrain, family = "multinomial", type.measure = "class")
+
+plot(cv_fit)
+print(paste("lambda min:", round(cv_fit$lambda.min, 4)))
+print(paste("lambda 1se:", round(cv_fit$lambda.1se, 4)))
+
+fit_min <- glmnet(x = xtrain, y = ytrain, family = "multinomial", lambda = cv_fit$lambda.min)
+
+# 
+# variable contributions at optimal lambda
+# 
+
+get_nonzero_coefs <- function(beta_matrix) {
+    nonzero_idx <- which(beta_matrix != 0)
+    if(length(nonzero_idx) > 0) {
+        return(data.frame(
+            Variable = rownames(beta_matrix)[nonzero_idx],
+            Coefficient = beta_matrix[nonzero_idx]
+        ))
+    } else {
+        return(NULL)
+    }
+}
+coef_list <- coef(fit_min) # coefficients per class
+for(i in 1:length(coef_list)) { # non-zero coefficients per class
+    cat("\nclass", names(coef_list)[i], "non-zero coefficients:\n")
+    print(get_nonzero_coefs(coef_list[[i]]))
+}
+
+n_nonzero <- sapply(coef_list, function(x) sum(x != 0) - 1)  # subtract 1 for intercept
+print(paste("mean number of non-zero coefficients per class (excluding intercept):", mean(n_nonzero)))
+
+coef_list <- coef(fit_min) # coefficients per class
+class1_coefs <- coef_list[[1]] # get the coefficients for the first group (class 1)
+
+# find the variable with the largest absolute coefficient
+top_var_idx <- which.max(abs(class1_coefs[-1])) # exclude intercept
+top_var_name <- rownames(class1_coefs)[top_var_idx + 1] # add 1 to account for intercept
+
+plot_data <- data.frame(Variable = xtrain[, top_var_idx], Group = ytrain)
+ggplot(plot_data, aes(x = Group, y = Variable, fill = Group)) +
+    geom_boxplot() +
+    labs(title = paste("Distribution of", top_var_name, "across groups"), y = "Expression Level", x = "Cancer Type") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    scale_fill_manual(values = c("#FF9999", "#66CC99", "#FFCC99", "#99CCFF")) + 
+    theme(legend.position = "none")
+
+# 
+# prediction
+# 
+
+pred_prob <- predict(fit_min, newx = xtest, s = "lambda.min", type = "response")
+pred_class <- apply(pred_prob[,,1], 1, which.max)
+
+conf_matrix <- table(Predicted = pred_class, Actual = ytest)
+rownames(conf_matrix) <- paste("Predicted", rownames(conf_matrix))
+colnames(conf_matrix) <- paste("Actual", colnames(conf_matrix))
+knitr::kable(conf_matrix, caption = "Confusion Matrix")
+
+balanced_accuracy <- mean(diag(conf_matrix))
+sensitivity <- diag(conf_matrix) / colSums(conf_matrix)
+specificity <- diag(conf_matrix) / rowSums(conf_matrix)
+misclass_error <- mean(pred_class != ytest)
+
+knitr::kable(data.frame(
+    "Metric" = c("Balanced Accuracy", "Mean Sensitivity", "Mean Specificity", "Misclassification Error"),
+    "Value" = c(round(balanced_accuracy, 4), round(mean(sensitivity), 4), round(mean(specificity), 4), round(misclass_error, 4))
+), row.names = FALSE)
+```

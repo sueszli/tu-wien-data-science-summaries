@@ -1,0 +1,140 @@
+---
+title: "AMRC: Exercise 11 - 11912007"
+output: pdf_document
+documentclass: article
+papersize: a4
+pagestyle: empty
+geometry:
+    - top=5mm
+    - bottom=5mm
+    - left=5mm
+    - right=5mm
+header-includes:
+    # title
+    - \usepackage{titling}
+    - \setlength{\droptitle}{-15pt}
+    - \pretitle{\vspace{-30pt}\begin{center}\LARGE}
+    - \posttitle{\end{center}\vspace{-50pt}}    
+    # content
+    - \usepackage{scrextend}
+    - \changefontsizes[8pt]{8pt}
+    # code
+    - \usepackage{fancyvrb}
+    - \fvset{fontsize=\fontsize{6pt}{6pt}\selectfont}
+    - \usepackage{listings}
+    - \lstset{basicstyle=\fontsize{6pt}{6pt}\selectfont\ttfamily}
+    # code output
+    - \DefineVerbatimEnvironment{verbatim}{Verbatim}{fontsize=\fontsize{6pt}{6pt}}
+---
+
+<!-- https://tuwel.tuwien.ac.at/pluginfile.php/4277993/mod_resource/content/12/ex11.pdf -->
+
+# Analysis
+
+This assignment involved using Support Vector Machines (SVM) to predict term deposit subscriptions using the bank dataset. The analysis proceeded through multiple stages of model optimization.
+
+Initially, applying the default SVM parameters with a radial basis kernel yielded relatively poor results. The confusion matrix showed 147 correct "no" predictions and 16 correct "yes" predictions, resulting in a balanced accuracy of 0.5454.
+
+The parameter tuning phase using `tune.svm()` explored gamma values ranging from 0.00001 to 0.1 and cost values from 1 to 1000. The optimal parameters were found to be gamma = 0.0001 and cost = 1000. When applying these optimized parameters, the model showed slight improvement with a balanced accuracy of 0.5596.
+
+The final improvement came through class weight adjustment to address the imbalanced nature of the dataset. The tuning process tested different class weights, with the optimal configuration being a weight of 10 for the "yes" class and 1 for the "no" class. This significant adjustment led to a substantial improvement in the model's performance, achieving a balanced accuracy of 0.8266.
+
+The final confusion matrix demonstrated much better classification results, with 1084 correct "no" predictions and 138 correct "yes" predictions. This improvement in balanced accuracy shows that adjusting class weights was crucial for handling the imbalanced nature of the dataset and achieving better prediction performance for the minority class ("yes" subscriptions).
+
+The progression of model improvements clearly shows that while parameter tuning of gamma and cost provided modest gains, the most significant improvement came from addressing the class imbalance through weight adjustment. This underscores the importance of considering class weights when dealing with imbalanced classification problems.
+
+\newpage
+
+# Code
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# klaR workaround
+Sys.setenv(PATH=paste("/opt/homebrew/bin", Sys.getenv("PATH"), sep=":"))
+pkgs <- c("classInt", "questionr", "klaR")
+for (p in pkgs) {
+    if (!requireNamespace(p, quietly = TRUE)) install.packages(p, type="source")
+    library(p, character.only = TRUE)
+}
+
+pkgs <- c("ISLR", "gclus", "assertthat", "ggplot2", "ROCit", "glmnet", "mgcv", "gam", "e1071")
+for (p in pkgs) {
+    if (!requireNamespace(p, quietly = TRUE)) install.packages(p, repos = "https://cran.rstudio.com")
+    library(p, character.only = TRUE)
+}
+
+options(repr.plot.width=20, repr.plot.height=5)
+
+options(scipen=999)
+set.seed(42)
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, fig.width=20, fig.height=4}
+bank_data <- read.csv("bank.csv", header = TRUE, sep = ";")
+bank_data$y <- factor(bank_data$y)
+
+train_idx <- sample(nrow(bank_data), size = floor(2/3 * nrow(bank_data)))
+train_data <- bank_data[train_idx, ]
+test_data <- bank_data[-train_idx, ]
+
+# 
+# a) svm with default params
+# 
+
+svm_model <- svm(y ~ ., data = train_data)
+preds <- predict(svm_model, test_data)
+
+eval <- function(actual, preds, comment) {
+    conf_matrix <- table(Actual = actual, Predicted = preds)
+    sensitivity <- conf_matrix[2,2] / sum(conf_matrix[2,])
+    specificity <- conf_matrix[1,1] / sum(conf_matrix[1,])
+    balanced_accuracy <- (sensitivity + specificity) / 2
+    cat(comment, "\n")
+    cat("confusion matrix:\n")
+    print(conf_matrix)
+    cat(paste("balanced accuracy:", round(balanced_accuracy, 4), "\n"))
+}
+eval(test_data$y, preds, "`svm` default parameters")
+
+# 
+# b,c) optimize with tune.svm
+# 
+
+gamma_range <- 10^(-5:-1) # 0.00001 to 0.1
+cost_range <- 10^(0:3)    # 1 to 1000
+
+tuned_svm <- tune.svm(y ~ ., data = train_data, gamma = gamma_range, cost = cost_range, tunecontrol = tune.control(cross = 5)) # cross val
+cat(paste("optimal parameters:", tuned_svm$best.parameters), "\n")
+plot(tuned_svm)
+
+optimal_svm <- svm(y ~ ., data = train_data, gamma = tuned_svm$best.parameters$gamma, cost = tuned_svm$best.parameters$cost)
+preds_optimal <- predict(optimal_svm, test_data)
+eval(test_data$y, preds_optimal, "`tune.svm` optimal parameters")
+
+# 
+# d) optimize with tune
+# 
+
+library(e1071)
+
+tune_result <- tune(svm, y ~ ., data = train_data,
+    # grid search range
+    ranges = list(class.weights = list(
+        list(yes = 1, no = 1),
+        list(yes = 5, no = 1),
+        list(yes = 10, no = 1)
+    )),
+    # inverse of balanced accuracy, as loss
+    tunecontrol = tune.control(sampling = "cross", error.fun = function(actual, predicted) {
+        conf_matrix <- table(Actual = actual, Predicted = predicted)
+        sensitivity <- conf_matrix[2, 2] / sum(conf_matrix[2, ])
+        specificity <- conf_matrix[1, 1] / sum(conf_matrix[1, ])
+        balanced_accuracy <- (sensitivity + specificity) / 2
+        return(1 - balanced_accuracy)
+    })
+)
+cat(paste("optimal parameters:", tune_result$best.parameters), "\n")
+
+best_model <- tune_result$best.model
+preds_best <- predict(best_model, test_data)
+eval(test_data$y, preds_best, "`tune` optimal parameters")
+```

@@ -1,0 +1,230 @@
+---
+title: "AMRC: Exercise 4 - 11912007"
+output: pdf_document
+documentclass: article
+papersize: a4
+pagestyle: empty
+geometry:
+    - top=5mm
+    - bottom=5mm
+    - left=5mm
+    - right=5mm
+header-includes:
+    # title
+    - \usepackage{titling}
+    - \setlength{\droptitle}{-15pt}
+    - \pretitle{\vspace{-30pt}\begin{center}\LARGE}
+    - \posttitle{\end{center}\vspace{-50pt}}    
+    # content
+    - \usepackage{scrextend}
+    - \changefontsizes[8pt]{8pt}
+    # code
+    - \usepackage{fancyvrb}
+    - \fvset{fontsize=\fontsize{6pt}{6pt}\selectfont}
+    - \usepackage{listings}
+    - \lstset{basicstyle=\fontsize{6pt}{6pt}\selectfont\ttfamily}
+    # code output
+    - \DefineVerbatimEnvironment{verbatim}{Verbatim}{fontsize=\fontsize{6pt}{6pt}}
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+deps <- c("ISLR", "Metrics", "ggplot2", "tidyr", "microbenchmark", "dplyr", "patchwork", "gridExtra", "readxl", "cvTools", "leaps", "assertthat", "assertr", "testthat", "caret", "leaps", "pls", "glmnet")
+for (p in deps) {
+    if (!requireNamespace(p, quietly = TRUE)) {
+        install.packages(p, repos = "https://cran.rstudio.com")
+    }
+    library(p, character.only = TRUE)
+}
+set.seed(42)
+options(scipen=999)
+load("building.RData")
+```
+
+# Analysis
+
+Final performance comparison of the models:
+
+| Model                         | Training RMSE | Test RMSE |
+|-------------------------------|---------------|-----------|
+| Full Linear Model             | 0.1910        | 2.9346    |
+| Best Subset (5 vars)          | 0.2950        | 0.3072    |
+| PCR (37 components)           | 0.2660        | 0.2390    |
+| PLS (7 components)            | 0.2859        | 0.2416    |
+| Ridge Regression              | 0.2243        | 0.2564    |
+| Lasso Regression              | 0.2014        | 0.2571    |
+| Adaptive Lasso Regression     | 0.2269        | 0.2441    |
+
+#### Ridge Regression Analysis
+
+For Ridge regression, I used `glmnet` with `alpha=0`. The plot shows how the coefficients shrink towards zero as lambda increases. The default lambda sequence ranges from 0.072 to 16.072, with 100 values. The parameter `alpha=0` specifies Ridge regression, which uses L2 regularization.
+
+Using cross-validation with `cv.glmnet()`, I found the optimal lambda (minimum MSE) to be 0.0716. This lambda value provides the best balance between bias and variance. The model achieved a training RMSE of 0.2243 and test RMSE of 0.2564.
+
+#### Lasso Regression Analysis
+
+For Lasso regression (`alpha=1`), the coefficient paths show more variables being set exactly to zero as lambda increases. The optimal lambda from cross-validation was 0.006228, resulting in a training RMSE of 0.2014 and test RMSE of 0.2571.
+
+#### Adaptive Lasso Analysis
+
+The Adaptive Lasso used weights derived from the Ridge regression coefficients. This approach combines the stability of Ridge regression with Lasso's variable selection properties. The optimal lambda was 14.4992, yielding a training RMSE of 0.2269 and test RMSE of 0.2441.
+
+#### Model Comparison
+
+Comparing the methods, Ridge regression retained all 107 variables with non-zero coefficients, while Lasso and Adaptive Lasso showed stronger variable selection with only 21 and 22 non-zero coefficients respectively. The Adaptive Lasso performed best on the test set with the lowest RMSE of 0.2441, suggesting it found a good balance between model complexity and prediction accuracy. The Adaptive Lasso seems most suitable for this dataset as it combines effective variable selection with good predictive performance.
+
+# Code
+
+```R
+# a) download
+url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00437/Residential-Building-Data-Set.xlsx"
+temp <- tempfile(fileext = ".xlsx")
+download.file(url, temp, mode = "wb")
+df <- read_excel(temp)
+unlink(temp)
+
+# b) use provided .RData file
+load("building.RData")
+```
+
+```{R, echo=TRUE, fig.width=15, fig.height=4, warning=FALSE}
+# random 2/3 train, 1/3 test split
+split_and_validate_data <- function(df) {
+    n <- nrow(df)
+    n_train <- round(2/3 * n)
+    n_test <- n - n_train
+    train_indices <- sample(1:n, n_train)
+    train_data <- df[train_indices, ]
+    test_data <- df[-train_indices, ]
+    y_train <- train_data$y
+    X_train <- train_data[, setdiff(names(train_data), "y")]
+    y_test <- test_data$y
+    X_test <- test_data[, setdiff(names(test_data), "y")]
+    
+    assert_that((n_train + n_test == n) && nrow(train_data) == n_train && nrow(test_data) == n_test, msg="split sizes don't add up")
+    assert_that(length(intersect(train_indices, which(!1:n %in% train_indices))) == 0, msg="train and test sets overlap")
+    assert_that(all(names(X_train) == names(X_test)), msg="feature names don't match between train and test")
+    assert_that(length(y_train) == nrow(X_train) && length(y_test) == nrow(X_test), msg="response and feature dimensions mismatch")
+    assert_that(!any(is.na(X_train)) && !any(is.na(X_test)) && !any(is.na(y_train)) && !any(is.na(y_test)), msg="missing values found in data")
+    return(list(
+        X_train = X_train,
+        y_train = y_train,
+        X_test = X_test,
+        y_test = y_test
+    ))
+}
+split_data <- split_and_validate_data(df)
+X_train <- split_data$X_train
+y_train <- split_data$y_train # already log transformed
+X_test <- split_data$X_test
+y_test <- split_data$y_test
+
+# 
+# 1) ridge regression
+# 
+
+# a) fit ridge regression model
+X_train_matrix <- as.matrix(X_train)
+X_test_matrix <- as.matrix(X_test)
+ridge_model <- glmnet(X_train_matrix, y_train, alpha = 0)
+plot(ridge_model, xvar="lambda", label=TRUE)
+cat("number of lambda values:", length(ridge_model$lambda), "\n")
+cat("lambda range:", range(ridge_model$lambda), "\n")
+
+# b) 10-fold cv to find optimal lambda
+cv_ridge <- cv.glmnet(X_train_matrix, y_train, alpha = 0, nfolds = 10)
+plot(cv_ridge)
+cat("optimal lambda (minimum MSE):", cv_ridge$lambda.min, "\n")
+cat("lambda within 1 SE (1 standard error rule):", cv_ridge$lambda.1se, "\n")
+ridge_coef <- coef(cv_ridge, s="lambda.min")
+
+# c) test set performance
+train_preds <- predict(ridge_model, s = cv_ridge$lambda.min, newx = X_train_matrix)
+test_preds <- predict(ridge_model, s = cv_ridge$lambda.min, newx = X_test_matrix)
+cat("train RMSE:", round(rmse(train_preds, y_train), 4), "\n")
+cat("test RMSE:", round(rmse(test_preds, y_test), 4), "\n")
+plot_data <- data.frame(predicted = as.vector(test_preds),actual = y_test)
+ggplot(plot_data, aes(x = predicted, y = actual)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, color = "red") +
+    labs(x = "Predicted Values", y = "Actual Values", title = "Test Set: Predicted vs Actual Values") +
+    theme_classic()
+
+# 
+# 2) lasso regression
+# 
+
+# a) fit lasso regression model
+lasso_model <- glmnet(X_train_matrix, y_train, alpha=1) # alpha=1 for lasso, 0 for ridge
+plot(lasso_model, xvar="lambda", label=TRUE)
+cat("number of lambda values:", length(lasso_model$lambda), "\n")
+cat("lambda range:", range(lasso_model$lambda), "\n")
+
+# b) 10-fold cv to find optimal lambda
+cv_lasso <- cv.glmnet(X_train_matrix, y_train, alpha=1, nfolds=10)
+plot(cv_lasso)
+cat("optimal lambda (minimum MSE):", cv_lasso$lambda.min, "\n")
+cat("lambda within 1 SE (1 standard error rule):", cv_lasso$lambda.1se, "\n")
+coef_min <- coef(cv_lasso, s="lambda.min")
+
+# c) test set performance
+train_preds <- predict(cv_lasso, newx=X_train_matrix, s="lambda.min")
+test_preds <- predict(cv_lasso, newx=X_test_matrix, s="lambda.min")
+cat("train RMSE:", round(rmse(train_preds, y_train), 4), "\n")
+cat("test RMSE:", round(rmse(test_preds, y_test), 4), "\n")
+plot_data <- data.frame(predicted = as.vector(test_preds),actual = y_test)
+ggplot(plot_data, aes(x = predicted, y = actual)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, color = "red") +
+    labs(x = "Predicted Values", y = "Actual Values", title = "Test Set: Predicted vs Actual Values") +
+    theme_classic()
+
+# 
+# 3) adaptive lasso regression
+# 
+
+# a) fit adaptive lasso model with weights from ridge regression
+ridge_coef_vector <- as.vector(coef(cv_ridge, s="lambda.min"))[-1] # get weights from ridge regression coefficients, exclude intercept
+weights <- 1/abs(ridge_coef_vector) # inverse of absolute coefficients
+weights[is.infinite(weights)] <- max(weights[!is.infinite(weights)]) * 100 # handle zero coefficients
+adaptive_lasso_model <- glmnet(X_train_matrix, y_train, alpha=1, penalty.factor=weights) # incorporate weights
+plot(adaptive_lasso_model, xvar="lambda", label=TRUE)
+cat("number of lambda values:", length(adaptive_lasso_model$lambda), "\n")
+cat("lambda range:", range(adaptive_lasso_model$lambda), "\n")
+
+# b) 10-fold cv to find optimal lambda
+cv_adaptive_lasso <- cv.glmnet(X_train_matrix, y_train, alpha=1, penalty.factor=weights, nfolds=10)
+plot(cv_adaptive_lasso)
+cat("optimal lambda (minimum MSE):", cv_adaptive_lasso$lambda.min, "\n")
+cat("lambda within 1 SE (1 standard error rule):", cv_adaptive_lasso$lambda.1se, "\n")
+coef_adaptive <- coef(cv_adaptive_lasso, s="lambda.min")
+
+# c) test set performance
+train_preds <- predict(cv_adaptive_lasso, newx=X_train_matrix, s="lambda.min")
+test_preds <- predict(cv_adaptive_lasso, newx=X_test_matrix, s="lambda.min")
+cat("train RMSE:", round(rmse(train_preds, y_train), 4), "\n")
+cat("test RMSE:", round(rmse(test_preds, y_test), 4), "\n")
+plot_data <- data.frame(predicted = as.vector(test_preds), actual = y_test)
+ggplot(plot_data, aes(x = predicted, y = actual)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, color = "red") +
+    labs(x = "Predicted Values", y = "Actual Values", title = "Test Set: Predicted vs Actual Values") +
+    theme_classic()
+
+# 
+# compare methods
+# 
+
+# compare number of non-zero coefficients between methods
+cat("ridge:", sum(abs(coef(cv_ridge, s="lambda.min")) > 0) - 1, "\n") # -1 for intercept
+cat("lasso:", sum(abs(coef(cv_lasso, s="lambda.min")) > 0) - 1, "\n")
+cat("adaptive lasso:", sum(abs(coef_adaptive) > 0) - 1, "\n")
+
+# compare variable selection across methods
+coef_comparison <- data.frame(
+    Variable = rownames(coef_adaptive),
+    Ridge = as.vector(coef(cv_ridge, s="lambda.min")),
+    Lasso = as.vector(coef(cv_lasso, s="lambda.min")),
+    Adaptive_Lasso = as.vector(coef_adaptive)
+)
+print(coef_comparison)
+```
