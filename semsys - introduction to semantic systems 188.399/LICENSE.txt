@@ -1,0 +1,27 @@
+# Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+## License Summary
+This work is licensed under the **Creative Commons Attribution 4.0 International License**.
+
+You are free to:
+- **Share** – Copy and redistribute the material in any medium or format.
+- **Adapt** – Remix, transform, and build upon the material for any purpose, even commercially.
+
+Under the following terms:
+- **Attribution** – You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
+- **No Additional Restrictions** – You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
+
+## Full License Text
+The full legal code of the **Creative Commons Attribution 4.0 International License** can be found here: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode)
+
+## Attribution Guidelines
+When using this work, please include the following attribution statement:
+
+```
+This work is licensed under a Creative Commons Attribution 4.0 International License.
+[Source]: 188.399-Introduction-To-Semantic-Systems-Summary-TUW
+[Link](https://github.com/mtiessler/188.399-Introduction-To-Semantic-Systems-Summary-TUW)
+```
+
+## Disclaimer
+This license does not grant permission for usage in a way that violates applicable laws or regulations. The licensor makes no warranties about the suitability of this work for any purpose.
