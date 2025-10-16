@@ -535,6 +535,7 @@ answer: a
 	- $N = [3, 1, 0, 0, 0]$
 	- $Q = [-0.33, 2, 4, 4]$
 - 5th step:  $\text{A: }a_2 \rightarrow \text{R: }1$
+    - might also be a non-optimal step as the greedy agent would choose an action out of {3, 4} as both have Q=4. However its not mentioned in the answer options. 
 	- $N[2]$ = 2
 	- $Q[2]$ = 2 + 1/2 · (1 - 2) = 1.5
 	- $N = [3, 2, 0, 0, 0]$
