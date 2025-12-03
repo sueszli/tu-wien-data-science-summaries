@@ -1108,7 +1108,7 @@ answer: c
 - we compute the predictions with the formula $2 + F_1 + F_2$ and compute the root mean squared error RMSE
 - $\text{err} = (12-12)^2 + (9-9)^2 + (10-10)^2 + (15-12)^2 = 9$ 
 - $n = 4$
-- $\text{RMSE} = \sqrt{\sum_i (p_i - a_i)^2 / n} = \sqrt{\frac{9}{2}} = 2.1213203436$
+- $\text{RMSE} = \sqrt{\sum_i (p_i - a_i)^2 / n} = \sqrt{\frac{9}{4}} = 1.5$
 
 | F1  | F2  | Target | Prediction |
 | --- | --- | ------ | ---------- |
