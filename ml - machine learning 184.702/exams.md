@@ -1085,7 +1085,7 @@ answer: b
 - posterior probabilities:
 	- $p(+ \mid a,n,s) \propto$ 2/3 · 1/3 · 1/4 · 2/7 = 0.0158730159
 	- $p(- \mid a,n,s) \propto$ 1/3 · 2/3 · 3/4 · 5/7 = 0.119047619
-- because $p(+ \mid a,n,s) < p(- \mid a,n,s)$ we predict the last sample to be $+$
+- because $p(+ \mid a,n,s) < p(- \mid a,n,s)$ we predict the last sample to be $-$
 
 ---
 
