@@ -1,0 +1,20 @@
+name: deploy to pages
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: curriculum
+      - uses: actions/deploy-pages@v4
+        id: deployment
