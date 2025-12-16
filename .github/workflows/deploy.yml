@@ -13,6 +13,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - run: find curriculum -name '*.md' -delete
       - uses: actions/upload-pages-artifact@v4
         with:
           path: curriculum
