@@ -1,6 +1,6 @@
-# curriculum (as of 2024)
+# curriculum
 
-*sources*
+*sources (as of late 2024)*
 
 - tiss page (most up to date): https://tiss.tuwien.ac.at/curriculum/public/curriculum.xhtml?&key=67853&locale=en
 - regulatory legal document (in force since october 2024): https://www.tuwien.at/fileadmin/Assets/dienstleister/studienabteilung/MSc_Studienplaene_2024/Masterstudium_Data_Science_2024.pdf
