@@ -1,4 +1,4 @@
-name: deploy to pages
+name: pages
 on:
   push:
     branches: [main]
@@ -13,7 +13,9 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - run: find curriculum -name '*.md' -delete
+      - run: |
+          find curriculum -name '*.md' -delete
+          touch curriculum/.nojekyll
       - uses: actions/upload-pages-artifact@v4
         with:
           path: curriculum
