@@ -1,0 +1,11 @@
+PREFIX ub: <https://example.org/vienna-ubahn#>
+
+SELECT ?station (COUNT(DISTINCT ?line) AS ?lineCount)
+WHERE {
+    ?stop a ub:Station ;
+          ub:name ?station ;
+          ub:line ?line .
+}
+GROUP BY ?stop ?station
+HAVING (COUNT(DISTINCT ?line) > 1)
+ORDER BY ?station

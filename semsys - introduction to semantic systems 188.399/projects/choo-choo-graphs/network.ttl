@@ -1,0 +1,29 @@
+@prefix ub: <https://example.org/vienna-ubahn#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+ub:Line a owl:Class .
+ub:Station a owl:Class .
+ub:connectsTo a owl:ObjectProperty, owl:SymmetricProperty .
+
+ub:U1 a ub:Line ; ub:name "U1" .
+ub:U4 a ub:Line ; ub:name "U4" .
+
+ub:Karlsplatz a ub:Station ;
+    ub:name "Karlsplatz" ;
+    ub:line ub:U1, ub:U4 ;
+    ub:connectsTo ub:Stephansplatz, ub:Stadtpark .
+ub:Stephansplatz a ub:Station ;
+    ub:name "Stephansplatz" ;
+    ub:line ub:U1 ;
+    ub:connectsTo ub:Schwedenplatz .
+ub:Stadtpark a ub:Station ;
+    ub:name "Stadtpark" ;
+    ub:line ub:U4 ;
+    ub:connectsTo ub:Landstrasse .
+ub:Landstrasse a ub:Station ;
+    ub:name "Landstraße" ;
+    ub:line ub:U4 ;
+    ub:connectsTo ub:Schwedenplatz .
+ub:Schwedenplatz a ub:Station ;
+    ub:name "Schwedenplatz" ;
+    ub:line ub:U1, ub:U4 .

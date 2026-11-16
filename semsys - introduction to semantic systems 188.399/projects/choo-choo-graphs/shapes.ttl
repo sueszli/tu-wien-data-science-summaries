@@ -1,0 +1,20 @@
+@prefix ub: <https://example.org/vienna-ubahn#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ub:StationShape a sh:NodeShape ;
+    sh:targetClass ub:Station ;
+    sh:property [
+        sh:path ub:name ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ], [
+        sh:path ub:line ;
+        sh:class ub:Line ;
+        sh:minCount 1
+    ], [
+        sh:path ub:connectsTo ;
+        sh:class ub:Station ;
+        sh:minCount 1
+    ] .
