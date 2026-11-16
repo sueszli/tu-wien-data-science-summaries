@@ -1,0 +1,5 @@
+environment,stage,samples,mean_seconds,median_seconds
+local,transfer,100,0.072692,0.070390
+local,inference,100,0.039266,0.036871
+aws,transfer,100,0.640640,0.613241
+aws,inference,100,0.763749,0.736123
