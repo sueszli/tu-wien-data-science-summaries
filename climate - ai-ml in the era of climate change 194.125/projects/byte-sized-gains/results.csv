@@ -1,0 +1,5 @@
+configuration,runs,top1_accuracy_pct,top5_accuracy_pct,model_footprint_mb
+2-bit,12,0.320,1.260,87.571
+4-bit,7,5.220,9.020,114.528
+8-bit,7,5.460,9.780,168.441
+full,1,5.480,9.860,538.064
