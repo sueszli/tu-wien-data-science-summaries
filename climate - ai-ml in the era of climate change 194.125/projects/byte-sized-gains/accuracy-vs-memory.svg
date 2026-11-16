@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="280" viewBox="0 0 600 280" role="img" aria-labelledby="title">
+  <title id="title">Median top-1 accuracy against model memory footprint by quantization level</title>
+  <rect width="600" height="280" fill="white"/>
+  <g fill="#222" font-family="sans-serif" font-size="12">
+    <text x="60" y="28" font-size="16" font-weight="bold">SmolLM-135M on LAMBADA</text>
+    <text x="60" y="45">Top-1 accuracy (%)</text>
+    <g stroke="#747474" fill="none"><path d="M60 52v168h460"/></g>
+    <path d="M56 220h4" stroke="#747474"/><text x="48" y="224" text-anchor="end">0</text><path d="M56 164h4" stroke="#747474"/><text x="48" y="168" text-anchor="end">2</text><path d="M56 108h4" stroke="#747474"/><text x="48" y="112" text-anchor="end">4</text><path d="M56 52h4" stroke="#747474"/><text x="48" y="56" text-anchor="end">6</text><path d="M60 220v4" stroke="#747474"/><text x="60" y="239" text-anchor="middle">0</text><path d="M175 220v4" stroke="#747474"/><text x="175" y="239" text-anchor="middle">150</text><path d="M290 220v4" stroke="#747474"/><text x="290" y="239" text-anchor="middle">300</text><path d="M405 220v4" stroke="#747474"/><text x="405" y="239" text-anchor="middle">450</text><path d="M520 220v4" stroke="#747474"/><text x="520" y="239" text-anchor="middle">600</text>
+    <text x="290" y="262" text-anchor="middle">Reported model footprint (MB)</text>
+    <circle cx="127.1" cy="211.0" r="5" fill="#2166ac"/><text x="135.1" y="221.0" font-size="12">2-bit</text><circle cx="147.8" cy="73.8" r="5" fill="#2166ac"/><text x="155.8" y="83.8" font-size="12">4-bit</text><circle cx="189.1" cy="67.1" r="5" fill="#2166ac"/><text x="197.1" y="83.1" font-size="12">8-bit</text><circle cx="472.5" cy="66.6" r="5" fill="#2166ac"/><text x="480.5" y="76.6" font-size="12">full</text>
+  </g>
+</svg>
