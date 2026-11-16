@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artist-exhibition network</title>
+<style>
+body { font: 17px system-ui; max-width: 650px; margin: 2em auto; padding: 0 1em; }
+svg { width: 100%; height: auto; border: 1px solid #bbb; margin-top: 1em; }
+line { stroke: #777; stroke-width: 2; }
+circle { fill: #24599a; }
+.exhibition { fill: #8f391e; }
+</style>
+<h1>Artist-exhibition network</h1>
+<p>An edge means an artist participated in an exhibition. The data is fictional.</p>
+<label>Exhibition year
+  <select id="year"><option value="">All</option><option>1924</option><option>1925</option></select>
+</label>
+<p id="status" aria-live="polite"></p>
+<svg id="network" viewBox="0 0 580 220" role="img" aria-label="Artist-exhibition network"></svg>
+<script>
+const artists = ["Artist A", "Artist B", "Artist C"];
+const exhibitions = [
+  { name: "Studio show", year: "1924", artists: [0, 1] },
+  { name: "Window gallery", year: "1924", artists: [2] },
+  { name: "Summer salon", year: "1925", artists: [1, 2] }
+];
+const year = document.querySelector("#year");
+const svg = document.querySelector("#network");
+const status = document.querySelector("#status");
+function node(tag, attributes, text) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [key, value] of Object.entries(attributes)) el.setAttribute(key, value);
+  if (text) el.textContent = text;
+  svg.append(el);
+}
+function render() {
+  svg.replaceChildren();
+  const visible = exhibitions.filter(show => !year.value || show.year === year.value);
+  const y = i => 50 + 60 * i;
+  visible.forEach((show, i) => show.artists.forEach(a =>
+    node("line", { x1: 110, y1: y(a), x2: 380, y2: y(i) })
+  ));
+  artists.forEach((artist, i) => {
+    node("text", { x: 20, y: y(i) + 5 }, artist);
+    node("circle", { cx: 110, cy: y(i), r: 6 });
+  });
+  visible.forEach((show, i) => {
+    node("circle", { cx: 380, cy: y(i), r: 6, class: "exhibition" });
+    node("text", { x: 396, y: y(i) + 5 }, show.name + " (" + show.year + ")");
+  });
+  status.textContent = visible.length + (visible.length === 1 ? " exhibition shown" : " exhibitions shown");
+}
+year.addEventListener("change", render);
+render();
+</script>
