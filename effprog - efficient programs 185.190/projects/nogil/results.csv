@@ -1,0 +1,9 @@
+implementation,gil_enabled,median_instructions
+cpython_extension_openmp,true,44442376
+ctypes_openmp,true,80107280
+ctypes_serial,true,118592997
+plain_hashlib,true,146146058
+thread_workers,false,198008716
+thread_workers,true,1030919157
+thread_executor,false,241749347062
+thread_executor,true,241741072306
