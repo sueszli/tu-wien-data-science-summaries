@@ -284,6 +284,4 @@ INNER JOIN user u ON u.id = rep.owner
 
 # execise 3, 4: query planning and optimization
 
-the last 2 exercises turned into their own independent github project because i wanted to use jupyter notebook and write some code for better benchmarking.
-
-see: https://github.com/sueszli/query-queen
+See the [Query Queen PostgreSQL example](../projects/query-queen/README.md) for a self-contained query planning and indexing demo on generated data. The original notebooks and database dump are not included.

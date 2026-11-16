@@ -6,3 +6,10 @@ A companion example for Fixed-Parameter Algorithms and Complexity (192.135, wint
 Finding a small consistent tree is different from greedily selecting the best next split. This stand-alone example tries every Boolean split and memoizes subproblems to minimize the number of internal nodes. The XOR fixture needs three internal nodes. The example is an exhaustive baseline, not the paper's parameterized algorithm or the original course submission.
 
     python3 demo.py
+
+## Archived materials
+
+- [Project report](report.pdf)
+- [Presentation slides](slides.pdf)
+
+The documents describe the original work. The runnable example above is a smaller baseline.

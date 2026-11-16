@@ -7,4 +7,10 @@ The example computes those summaries on fictional scores. Counts are included so
 
     python3 demo.py
 
-No customer reviews, model weights, original coursework, or group report are included.
+## Archived materials
+
+- [Methodology report](methodology-report.pdf)
+- [Findings report](findings-report.pdf)
+- [Presentation slides](slides.pdf)
+
+The original reports and slides are included above. The original data, model weights, and executable submission are not included.
