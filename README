@@ -1,35 +1,24 @@
-archive of all notes from my master's in data science @ tu wien
+                                        '
+               Z                  *   `
+           Z                        '  *
+          Z                        .---.
+             z                     `| |'
+               z                    | |
+              z                    /   \
+          z                       / / ' \
+       z                         / /  *  \
+     |\      _,,,---,,_         / .-~~~-. \
+     /,`.-'`'    -.  ;-;;,_    /  `-...-'  \
+  __|,4-  ) )-,_..;\ (  `'-'______ '  *  `  \
+ / '---''(_/--'  `-'\_)         /|----------'
+/______________________________/:|
+( ||      course notes      ||  |/
+ `------------------------------'
 
-i'd appreciate a star ⭐️ if you find them useful 
+Course notes from my master's in Data Science at TU Wien.
 
-  ,-.       _,---._ __  / \
- /  )    .-'       `./ /   \
-(  (   ,'            `/    /|
- \  `-"             \'\   / |
-  `.              ,  \ \ /  |
-   /`.          ,'-`----Y   |
-  (            ;        |   '
-  |  ,-.    ,-'         |  /
-  |  | (   |            | /
-  )  |  \  `.___________|/
-  `--'   `--'
+If GitHub doesn't render the math, open the notes in Obsidian or render them with Pandoc.
 
-if rendering math expressions fails in github use "obsidian" or "pandoc".
+Contact me directly if you'd like anything credited or removed.
 
-feel free to back up on vowi. i chose github because it's easier to collaborate on.
-
-for my undergrad summaries check out: https://github.com/sueszli/tu-wien-summaries-bsc
-
-for the course selector check out: https://sueszli.github.io/tu-wien-data-science-summaries/
-
-┌──────────────────────────────────────────────────────────────┐
-| please reach out directly if you'd like any content removed. |
-└──────────────────────────────────────────────────────────────┘
-
-i'm happy to remove content or give credit where it's due.
-
-┌──────────────────────────────────────────────────────────────┐
-| plagiarism is easy to detect. please use responsibly.        |
-└──────────────────────────────────────────────────────────────┘
-
-this repository had to be taken down during the ws25 term as a precaution. i had uploaded some of my exercise solutions before the submission deadline. unfortunately, this led to widespread plagiarism. some students copied my submissions word for word, including my name and matriculation number. as a result, i faced major point deductions and in some cases, even threats of legal action. but in the end, this project built more bridges than it burned. thank you! <3
+Course selector: https://sueszli.github.io/tu-wien-summaries-msc/
